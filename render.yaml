@@ -27,6 +27,10 @@ services:
         value: development
       - key: CORS_ORIGINS
         value: '["*"]'
+      - key: ADMIN_EMAIL
+        value: "admin@neurofusion.ai"
+      - key: ADMIN_PASSWORD
+        value: "Admin@12345"
       - key: OMP_NUM_THREADS
         value: "1"
       - key: MKL_NUM_THREADS

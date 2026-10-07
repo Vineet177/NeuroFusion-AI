@@ -46,6 +46,63 @@ async def lifespan(app: FastAPI):
                     pass
         except Exception:
             pass
+
+    # Ensure default Admin account exists on database startup
+    try:
+        from app.database.session import AsyncSessionLocal
+        from app.models.user import User
+        from app.models.doctor_profile import DoctorProfile
+        from app.utils.security import get_password_hash
+        from sqlalchemy import select
+
+        async with AsyncSessionLocal() as session:
+            admin_check = await session.execute(select(User).where(User.role == "Admin"))
+            admin_user = admin_check.scalars().first()
+            if not admin_user:
+                admin_email = getattr(settings, "ADMIN_EMAIL", "admin@neurofusion.ai").strip().lower()
+                admin_password = getattr(settings, "ADMIN_PASSWORD", "Admin@12345")
+                
+                existing_check = await session.execute(select(User).where(User.email == admin_email))
+                existing_user = existing_check.scalars().first()
+                if existing_user:
+                    existing_user.role = "Admin"
+                    existing_user.is_superuser = True
+                    existing_user.password_hash = get_password_hash(admin_password)
+                    await session.commit()
+                    print(f"[*] Account {admin_email} updated to Admin role.")
+                else:
+                    new_admin = User(
+                        name="System Administrator",
+                        email=admin_email,
+                        phone="+91 9999999999",
+                        gender="Other",
+                        password_hash=get_password_hash(admin_password),
+                        role="Admin",
+                        is_active=True,
+                        is_superuser=True,
+                        email_verified=True,
+                        phone_verified=True
+                    )
+                    session.add(new_admin)
+                    await session.commit()
+                    await session.refresh(new_admin)
+
+                    admin_profile = DoctorProfile(
+                        user_id=new_admin.id,
+                        full_name="System Administrator",
+                        specialization="Platform Operations & AI Core",
+                        sub_specialization="Infrastructure & Security",
+                        professional_title="System Administrator",
+                        hospital_name="NeuroFusion AI Clinical Core",
+                        availability_status="Available",
+                        years_experience=10
+                    )
+                    session.add(admin_profile)
+                    await session.commit()
+                    print(f"[*] Default Admin user initialized: {admin_email}")
+    except Exception as e:
+        print(f"[!] Admin auto-initialization notice: {e}")
+
     yield
     # Shutdown: dispose of database engine connections
     await engine.dispose()

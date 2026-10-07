@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     ADMIN_EMAIL_WHITELIST: Union[List[str], str] = []
 
+    # Default Initial Admin Credentials
+    ADMIN_EMAIL: str = "admin@neurofusion.ai"
+    ADMIN_PASSWORD: str = "Admin@12345"
+
     # Database (Default: MySQL on port 3306)
     DATABASE_URL: str = "mysql+aiomysql://root:Vineet%40123@127.0.0.1:3306/neurofusion"
     SYNC_DATABASE_URL: str = "mysql+pymysql://root:Vineet%40123@127.0.0.1:3306/neurofusion"
