@@ -47,22 +47,29 @@ class MRIModel:
 
     DEFAULT_WEIGHTS_RELATIVE_PATH = Path("app") / "trained_models" / "dementia_resnet18.pth"
 
-    def __init__(self, weights_path: Optional[Union[str, Path]] = None, device: Optional[str] = None):
+    def __init__(self, weights_path: Optional[Union[str, Path]] = None, device: Optional[str] = None, lazy_load: bool = True):
         """
-        Initialize MRI Classifier and load trained weights.
+        Initialize MRI Classifier and load trained weights lazily to respect memory limits.
         
         Args:
             weights_path: Path to dementia_resnet18.pth weights file.
             device: Hardware device ('cuda', 'cpu', or None for auto-detection).
+            lazy_load: If True, delays weight deserialization until first inference request.
         """
         if device:
             self.device = torch.device(device)
         else:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
-        logger.info(f"MRIModel executing on device: {self.device}")
+        logger.info(f"MRIModel executing on device: {self.device} (lazy_load={lazy_load})")
 
-        # Initialize ResNet50 network architecture matching exact checkpoint layer layout
+        # Configure single-threaded execution for low memory footprint
+        try:
+            torch.set_num_threads(1)
+        except Exception:
+            pass
+
+        # Initialize network architecture
         self.num_classes = len(self.CLASS_MAPPING)
         self.model = create_resnet50_model(num_classes=self.num_classes).to(self.device)
         self.is_weights_loaded = False
@@ -82,10 +89,12 @@ class MRIModel:
             else:
                 self.weights_path = default_path
 
-        # Load trained weights into model
-        self.load_model(self.weights_path)
+        # Load weights on startup only if lazy_load is disabled
+        if not lazy_load:
+            self.load_model(self.weights_path)
 
     def load_model(self, weights_path: Union[str, Path]) -> bool:
+        import gc
         target_path = Path(weights_path)
         logger.info(f"Attempting to load MRI ResNet50 weights from: {target_path}")
 
@@ -98,7 +107,17 @@ class MRIModel:
             return False
 
         try:
-            checkpoint = torch.load(target_path, map_location=self.device)
+            torch.set_grad_enabled(False)
+            try:
+                torch.set_num_threads(1)
+            except Exception:
+                pass
+
+            # Attempt mmap=True to avoid copying entire 90MB into heap RAM
+            try:
+                checkpoint = torch.load(target_path, map_location=self.device, mmap=True)
+            except Exception:
+                checkpoint = torch.load(target_path, map_location=self.device)
 
             if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
                 state_dict = checkpoint["state_dict"]
@@ -117,6 +136,10 @@ class MRIModel:
             for param in self.model.parameters():
                 param.requires_grad = False
 
+            del checkpoint
+            del state_dict
+            gc.collect()
+
             self.is_weights_loaded = True
             success_msg = f"[SUCCESS] MRI ResNet50 model weights loaded cleanly from '{target_path}'."
             print(success_msg)
@@ -129,6 +152,7 @@ class MRIModel:
             logger.error(err_msg, exc_info=True)
             self.model.eval()
             self.is_weights_loaded = False
+            gc.collect()
             return False
 
 
@@ -154,6 +178,9 @@ class MRIModel:
             }
         """
         logger.info("Executing MRI ResNet50 model inference...")
+
+        if not self.is_weights_loaded:
+            self.load_model(self.weights_path)
 
         try:
             # 1. Preprocess MRI image into PyTorch tensor (1, 3, 224, 224)

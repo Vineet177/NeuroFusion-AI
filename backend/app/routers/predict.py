@@ -29,9 +29,9 @@ from app.schemas.medical_file import MedicalFileCreate
 logger = logging.getLogger("neurofusion.predict_router")
 logger.setLevel(logging.INFO)
 
-# Instantiate singleton ML model evaluators
-mri_evaluator = MRIModel()
-eeg_evaluator = EEGModel()
+# Instantiate singleton ML model evaluators lazily to prevent OOM on startup
+mri_evaluator = MRIModel(lazy_load=True)
+eeg_evaluator = EEGModel(lazy_load=True)
 fusion_engine = MultimodalFusionModel()
 
 predict_router = APIRouter(prefix="", tags=["ML Inference"])

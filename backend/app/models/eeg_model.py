@@ -112,13 +112,19 @@ class EEGModel:
 
     DEFAULT_WEIGHTS_RELATIVE_PATH = Path("app") / "trained_models" / "best_eeg_model.pth"
 
-    def __init__(self, weights_path: Optional[Union[str, Path]] = None, device: Optional[str] = None):
+    def __init__(self, weights_path: Optional[Union[str, Path]] = None, device: Optional[str] = None, lazy_load: bool = True):
         if device:
             self.device = torch.device(device)
         else:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        logger.info(f"EEGModel executing on device: {self.device}")
+        logger.info(f"EEGModel executing on device: {self.device} (lazy_load={lazy_load})")
+
+        # Configure single-threaded execution for low memory footprint
+        try:
+            torch.set_num_threads(1)
+        except Exception:
+            pass
 
         # Instantiate matching architecture
         self.model = EEGNet(in_channels=19, num_classes=3).to(self.device)
@@ -132,9 +138,11 @@ class EEGModel:
             p2 = base_dir / "app" / "trained_models" / "best_eeg_model.pth"
             self.weights_path = p1 if p1.exists() else p2
 
-        self.load_model(self.weights_path)
+        if not lazy_load:
+            self.load_model(self.weights_path)
 
     def load_model(self, weights_path: Union[str, Path]) -> bool:
+        import gc
         target_path = Path(weights_path)
         logger.info(f"Attempting to load EEG model weights from: {target_path}")
 
@@ -145,7 +153,16 @@ class EEGModel:
             return False
 
         try:
-            checkpoint = torch.load(target_path, map_location=self.device)
+            torch.set_grad_enabled(False)
+            try:
+                torch.set_num_threads(1)
+            except Exception:
+                pass
+
+            try:
+                checkpoint = torch.load(target_path, map_location=self.device, mmap=True)
+            except Exception:
+                checkpoint = torch.load(target_path, map_location=self.device)
 
             if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
                 state_dict = checkpoint["state_dict"]
@@ -163,6 +180,10 @@ class EEGModel:
             for param in self.model.parameters():
                 param.requires_grad = False
 
+            del checkpoint
+            del state_dict
+            gc.collect()
+
             self.is_weights_loaded = True
             logger.info("EEG model weights loaded and evaluated successfully.")
             return True
@@ -171,11 +192,15 @@ class EEGModel:
             logger.error(f"Failed to load EEG model weights from {target_path}: {str(err)}", exc_info=True)
             self.model.eval()
             self.is_weights_loaded = False
+            gc.collect()
             return False
 
     @torch.no_grad()
     def predict(self, eeg_file: Union[str, Path]) -> Dict[str, Any]:
         logger.info(f"Executing EEG model inference on file: {eeg_file}")
+
+        if not self.is_weights_loaded:
+            self.load_model(self.weights_path)
 
         try:
             target_path = Path(eeg_file)

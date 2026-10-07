@@ -7,8 +7,10 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install --upgrade pip && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 20
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: DATABASE_URL
         fromDatabase:
           name: neurofusion-db
@@ -25,6 +27,14 @@ services:
         value: development
       - key: CORS_ORIGINS
         value: '["*"]'
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: MALLOC_TRIM_THRESHOLD_
+        value: "100000"
 
 databases:
   # Managed PostgreSQL Database
