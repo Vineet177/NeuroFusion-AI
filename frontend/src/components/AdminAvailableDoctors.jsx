@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { adminDoctorApi } from '../api/adminDoctorApi';
 import { useAuth } from '../hooks/useAuth';
+import { API_BASE_URL } from '../api/axios';
 
 const AVAILABILITY_CONFIG = {
   Available: {
@@ -438,7 +439,7 @@ const AdminAvailableDoctors = () => {
                         <div className="w-12 h-12 rounded-2xl overflow-hidden border border-purple-200 bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-base font-bold shadow-xs shrink-0">
                           {doc.photo ? (
                             <img 
-                              src={doc.photo.startsWith('http') ? doc.photo : `http://localhost:8000${doc.photo}`} 
+                              src={doc.photo.startsWith('http') ? doc.photo : `${API_BASE_URL}${doc.photo}`} 
                               alt={doc.name} 
                               className="w-full h-full object-cover" 
                             />
@@ -567,7 +568,7 @@ const AdminAvailableDoctors = () => {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] text-white flex items-center justify-center font-bold text-xl shadow-md overflow-hidden">
                   {selectedDoctor.profile_photo ? (
                     <img 
-                      src={selectedDoctor.profile_photo.startsWith('http') ? selectedDoctor.profile_photo : `http://localhost:8000${selectedDoctor.profile_photo}`} 
+                      src={selectedDoctor.profile_photo.startsWith('http') ? selectedDoctor.profile_photo : `${API_BASE_URL}${selectedDoctor.profile_photo}`} 
                       alt={selectedDoctor.name} 
                       className="w-full h-full object-cover" 
                     />

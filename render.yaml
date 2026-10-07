@@ -1,0 +1,35 @@
+services:
+  # NeuroFusion FastAPI Backend Web Service
+  - type: web
+    name: neurofusion-backend
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: neurofusion-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PROJECT_NAME
+        value: "NeuroFusion AI"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 120
+      - key: SMS_MODE
+        value: development
+      - key: SMS_PROVIDER
+        value: development
+      - key: CORS_ORIGINS
+        value: '["*"]'
+
+databases:
+  # Managed PostgreSQL Database
+  - name: neurofusion-db
+    region: oregon
+    plan: free
+    databaseName: neurofusion
+    user: neurofusion

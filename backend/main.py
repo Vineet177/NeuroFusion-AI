@@ -77,8 +77,9 @@ async def validation_exception_handler(request, exc: RequestValidationError):
         content={"success": False, "message": msg, "field": field, "detail": msg}
     )
 
-# Set up CORS middleware to allow all frontend origins & ports with credentials support
-origins = [
+# Set up CORS middleware to allow configured frontend origins & ports with credentials support
+configured_origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
+origins = list(set([
     "http://localhost",
     "http://localhost:5173",
     "http://localhost:3000",
@@ -87,12 +88,14 @@ origins = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5174",
-]
+    settings.FRONTEND_URL,
+    *configured_origins
+]))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"http://.*",
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

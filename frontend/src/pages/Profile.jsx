@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { profileApi } from '../api/profileApi';
+import { API_BASE_URL } from '../api/axios';
 
 const SPECIALIZATION_OPTIONS = [
   'Neurology',
@@ -430,7 +431,7 @@ const Profile = () => {
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-white dark:border-purple-900 shadow-md bg-gradient-to-tr from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-2xl font-bold tracking-wider">
                   {currentPhoto ? (
                     <img 
-                      src={currentPhoto.startsWith('http') || currentPhoto.startsWith('blob:') ? currentPhoto : `http://localhost:8000${currentPhoto}`} 
+                      src={currentPhoto.startsWith('http') || currentPhoto.startsWith('blob:') ? currentPhoto : `${API_BASE_URL}${currentPhoto}`} 
                       alt={displayName} 
                       className="w-full h-full object-cover" 
                     />
@@ -723,7 +724,7 @@ const Profile = () => {
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white dark:border-purple-900/60 shadow-lg bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-3xl font-bold tracking-wider">
                 {currentPhoto ? (
                   <img 
-                    src={currentPhoto.startsWith('http') || currentPhoto.startsWith('blob:') ? currentPhoto : `http://localhost:8000${currentPhoto}`} 
+                    src={currentPhoto.startsWith('http') || currentPhoto.startsWith('blob:') ? currentPhoto : `${API_BASE_URL}${currentPhoto}`} 
                     alt={profile?.full_name} 
                     className="w-full h-full object-cover" 
                   />

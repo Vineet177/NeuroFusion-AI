@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { patientApi, filterPatientsByUser } from '../api/patientApi';
 import { MOCK_PATIENTS } from '../utils/constants';
+import { API_BASE_URL } from '../api/axios';
 
 const Navbar = ({ onToggleSidebar, selectedPatient, setSelectedPatient, onInitiateLogout }) => {
   const { user, logout } = useAuth();
@@ -163,7 +164,7 @@ const Navbar = ({ onToggleSidebar, selectedPatient, setSelectedPatient, onInitia
               <div className="w-7 h-7 rounded-lg overflow-hidden bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 {user?.picture || user?.profile_photo ? (
                   <img 
-                    src={(user.picture || user.profile_photo).startsWith('http') || (user.picture || user.profile_photo).startsWith('blob:') ? (user.picture || user.profile_photo) : `http://localhost:8000${user.picture || user.profile_photo}`}
+                    src={(user.picture || user.profile_photo).startsWith('http') || (user.picture || user.profile_photo).startsWith('blob:') ? (user.picture || user.profile_photo) : `${API_BASE_URL}${user.picture || user.profile_photo}`}
                     alt={user?.name}
                     className="w-full h-full object-cover"
                   />

@@ -1,5 +1,5 @@
-from typing import List, Union
-from pydantic import Field, field_validator
+from typing import List, Union, Optional
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -65,6 +65,42 @@ class Settings(BaseSettings):
             except Exception:
                 return [v]
         return v
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_database_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if v_clean.startswith("postgres://"):
+                return v_clean.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v_clean.startswith("postgresql://") and not v_clean.startswith("postgresql+"):
+                return v_clean.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif v_clean.startswith("mysql://") and not v_clean.startswith("mysql+"):
+                return v_clean.replace("mysql://", "mysql+aiomysql://", 1)
+            return v_clean
+        return v
+
+    @field_validator("SYNC_DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_sync_database_url(cls, v: Union[str, None]) -> Optional[str]:
+        if isinstance(v, str) and v.strip():
+            v_clean = v.strip()
+            if v_clean.startswith("postgres://"):
+                return v_clean.replace("postgres://", "postgresql+psycopg2://", 1)
+            elif v_clean.startswith("postgresql://") and not v_clean.startswith("postgresql+"):
+                return v_clean.replace("postgresql://", "postgresql+psycopg2://", 1)
+            elif v_clean.startswith("mysql://") and not v_clean.startswith("mysql+"):
+                return v_clean.replace("mysql://", "mysql+pymysql://", 1)
+            return v_clean
+        return v
+
+    @model_validator(mode="after")
+    def sync_database_urls(self):
+        if "postgresql" in self.DATABASE_URL:
+            # If SYNC_DATABASE_URL is missing or still default mysql, align with postgresql
+            if not self.SYNC_DATABASE_URL or "mysql" in self.SYNC_DATABASE_URL:
+                self.SYNC_DATABASE_URL = self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace("postgresql://", "postgresql+psycopg2://")
+        return self
 
     @field_validator("ADMIN_EMAIL_WHITELIST", mode="before")
     @classmethod
